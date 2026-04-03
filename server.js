@@ -1,8 +1,20 @@
 const { Server } = require("socket.io");
 
 // start Socket.io server (with CORS enabled)
-const io = new Server(8080, {
-    cors: { origin: "*" }
+const io = require("socket.io")(server, {
+  cors: {
+    origin: "https://ssambender.github.io",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+// const io = new Server(8080, {
+//     cors: { origin: "*" }
+// });
+const PORT = process.env.PORT || 8000;
+
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
 const gameStates = {};
