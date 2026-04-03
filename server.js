@@ -1,16 +1,16 @@
+const http = require("http"); 
 const { Server } = require("socket.io");
 
-// start Socket.io server (with CORS enabled)
-const io = require("socket.io")(server, {
+const server = http.createServer(); 
+
+const io = new Server(server, {
   cors: {
     origin: "https://ssambender.github.io",
     methods: ["GET", "POST"],
     credentials: true
   }
 });
-// const io = new Server(8080, {
-//     cors: { origin: "*" }
-// });
+
 const PORT = process.env.PORT || 8000;
 
 server.listen(PORT, () => {
