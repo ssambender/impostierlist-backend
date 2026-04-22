@@ -5,7 +5,11 @@ const server = http.createServer();
 
 const io = new Server(server, {
   cors: {
-    origin: "https://ssambender.github.io",
+    origin: [
+      "https://ssambender.github.io",
+      "https://impostierlist.com",
+      "https://www.impostierlist.com"
+    ],
     methods: ["GET", "POST"],
     credentials: true
   }
