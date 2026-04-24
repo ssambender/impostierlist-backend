@@ -23,6 +23,12 @@ server.listen(PORT, () => {
 
 const gameStates = {};
 
+function updateLobbyActivity(roomCode) {
+    if (gameStates[roomCode]) {
+        gameStates[roomCode].lastActive = Date.now();
+    }
+}
+
 // PROMPTS
 let personalized_prompts = [
     "Most likely to become president",
@@ -1879,6 +1885,27 @@ function startRound(roomCode) {
     });
 }
 
+
+// REMOVE INACTIVE LOBBIES
+const CLEANUP_INTERVAL_MS = 15 * 60 * 1000;  // check every 15 minutes
+const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // for lobbies that have been inactive for 15+ minutes
+
+setInterval(() => {
+    const now = Date.now();
+    for (const roomCode in gameStates) {
+        if (now - gameStates[roomCode].lastActive > INACTIVITY_LIMIT_MS) {
+            console.log(`Closing room ${roomCode} due to inactivity.`);
+            
+            io.to(roomCode).emit('resetToLobby'); 
+            
+            io.in(roomCode).disconnectSockets(); 
+            
+            delete gameStates[roomCode];
+        }
+    }
+}, CLEANUP_INTERVAL_MS);
+
+
 // SERVER HANDLING
 io.on('connection', (socket) => {
     console.log('New client connected: ' + socket.id);
@@ -1897,7 +1924,8 @@ io.on('connection', (socket) => {
             scores: {},
             personalized: false,
             customNames: [],
-            promptHistory: []
+            promptHistory: [],
+            lastActive: Date.now()
         };
         socket.emit('lobbyCreated', { roomCode: data.roomCode, username: data.hostName });
     });
@@ -1967,6 +1995,7 @@ io.on('connection', (socket) => {
         state.personalized = personal === "true";
 
         startRound(roomCode);
+        updateLobbyActivity(roomCode);
     });
 
     // SUBMIT TIERLIST
@@ -2069,6 +2098,7 @@ io.on('connection', (socket) => {
             state.round++;
             startRound(data.roomCode);
         }
+        updateLobbyActivity(roomCode);
     });
 
     // PLAY AGAIN
@@ -2104,6 +2134,7 @@ io.on('connection', (socket) => {
             state.allLists = {};
             state.guesses = {};
             state.promptHistory = [];
+            updateLobbyActivity(data.roomCode);
             
             io.to(data.roomCode).emit('backToLobbyWaiting');
         }
