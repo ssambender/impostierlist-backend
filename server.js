@@ -1931,45 +1931,30 @@ io.on('connection', (socket) => {
     });
 
     // PLAYER JOIN LOBBY
-    // PLAYER JOIN LOBBY
     socket.on('join', (data) => {
         const { roomCode, username } = data;
         const state = gameStates[roomCode];
 
         if (!state) return socket.emit('lobbyDoesntExist');
-
-        // 1. CHECK FOR RECONNECTING PLAYERS
-        // If they momentarily lost connection, their name will still be in the list
-        const existingPlayer = state.players.find(p => p.username.toLowerCase() === username.toLowerCase());
-
-        if (existingPlayer) {
-            // Update their socket ID so the server can hear them again
-            existingPlayer.id = socket.id;
-            socket.join(roomCode);
-            socket.roomCode = roomCode;
-            socket.username = existingPlayer.username;
-            
-            // Let them back in silently without throwing a 'nameTaken' error
-            socket.emit('joinedLobby', { roomCode, username: existingPlayer.username });
-            console.log(`${username} reconnected to ${roomCode}`);
-            return; 
-        }
-
-        // 2. NEW PLAYER CHECKS
         if (state.gameInProgress) return socket.emit('lobbyInProgress');
         if (state.players.length >= 7) return socket.emit('lobbyFull');
+
+        // case-insensitive name check
+        if (state.players.some(p => p.username.toLowerCase() === username.toLowerCase())) {
+            return socket.emit('nameTaken');
+        }
 
         socket.join(roomCode);
         socket.roomCode = roomCode;
         socket.username = username;
         
-        // assign players a random color
+        // assign pklayers a random color
         const allColors = ['var(--color-r)', 'var(--color-o)', 'var(--color-y)', 'var(--color-g)', 'var(--color-b)', 'var(--color-i)', 'var(--color-v)'];
         const takenColors = state.players.map(p => p.color);
         const availableColors = allColors.filter(c => !takenColors.includes(c));
         const assignedColor = availableColors.length > 0 
             ? availableColors[Math.floor(Math.random() * availableColors.length)] 
-            : 'var(--color-r)'; 
+            : 'var(--color-r)'; // fallback color (shouldn't happen currently with lobby limit)
         
         state.players.push({ id: socket.id, username: username, color: assignedColor });
         socket.emit('joinedLobby', { roomCode, username: username });
@@ -2213,16 +2198,12 @@ io.on('connection', (socket) => {
         const roomCode = socket.roomCode;
         if (roomCode && gameStates[roomCode]) {
             const state = gameStates[roomCode];
-            
-            if (!state.gameInProgress) {
-                state.players = state.players.filter(p => p.id !== socket.id);
-                
-                if (state.players.length === 0) {
-                    delete gameStates[roomCode];
-                } else {
-                    const playersData = state.players.map(p => ({ username: p.username, color: p.color }));
-                    io.to(roomCode).emit('updateLobbyPlayers', { players: playersData });
-                }
+            state.players = state.players.filter(p => p.id !== socket.id);
+            if (state.players.length === 0) {
+                delete gameStates[roomCode];
+            } else {
+                const playersData = state.players.map(p => ({ username: p.username, color: p.color }));
+                io.to(roomCode).emit('updateLobbyPlayers', { players: playersData });
             }
         }
     });
