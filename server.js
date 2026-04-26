@@ -1887,8 +1887,8 @@ function startRound(roomCode) {
 
 
 // REMOVE INACTIVE LOBBIES
-const CLEANUP_INTERVAL_MS = 15 * 60 * 1000;  // check every 15 minutes
-const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // for lobbies that have been inactive for 15+ minutes
+const CLEANUP_INTERVAL_MS = 30 * 60 * 1000;  // check every 30 minutes
+const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // for lobbies that have been inactive for 30+ minutes
 
 setInterval(() => {
     const now = Date.now();
