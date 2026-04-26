@@ -2000,11 +2000,20 @@ io.on('connection', (socket) => {
 
     // SUBMIT TIERLIST
     socket.on('submitTierListAnswer', (data) => {
-        const { roomCode, submittedList } = data;
-        const state = gameStates[roomCode];
+    const { roomCode, submittedList } = data;
+    const state = gameStates[roomCode];
+    
+    // Guard clause to prevent crash
+    if (!state) {
+        console.error(`Room ${roomCode} not found for submitTierListAnswer`);
+        return socket.emit('resetToLobby'); // or a custom error event
+        }
         
         state.allLists[socket.username] = submittedList;
-
+    
+        // Optional: Update activity so the room doesn't get cleaned up while active!
+        updateLobbyActivity(roomCode);
+    
         if (Object.keys(state.allLists).length === state.players.length) {
             io.to(roomCode).emit('everyoneSubmitted', { 
                 submissions: state.allLists, 
@@ -2018,7 +2027,13 @@ io.on('connection', (socket) => {
         const { roomCode, votingFor } = data;
         const state = gameStates[roomCode];
         
+        // Guard clause to prevent crash
+        if (!state) {
+            return socket.emit('resetToLobby'); 
+        }
+        
         state.guesses[socket.username] = votingFor;
+        updateLobbyActivity(roomCode);
 
         // when everyone has voted
         if (Object.keys(state.guesses).length === state.players.length) {
@@ -2093,7 +2108,9 @@ io.on('connection', (socket) => {
 
     // NEXT ROUND
     socket.on('nextRound', (data) => {
-        const state = gameStates[data.roomCode];
+        const { roomCode } = data;
+        const state = gameStates[roomCode];
+      
         if (state && state.round < 3) {
             state.round++;
             startRound(data.roomCode);
